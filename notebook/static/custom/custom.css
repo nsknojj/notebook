@@ -27,7 +27,6 @@ This will always be an empty file in IPython
 .big_upload .btn-upload {
   height: 22px;
 }
-
 /* text */
 .text {
   float:left;
@@ -38,7 +37,6 @@ This will always be an empty file in IPython
   font-size:12px;
   line-height: 22px;
 }
-
 /* Progress bar */
 .progress {
   float:left;

@@ -7,7 +7,8 @@ define([
     'base/js/dialog',
     'base/js/events',
     'base/js/keyboard',
-    'moment'
+    'moment',
+    'bigupload/js/fileupload'
 ], function(IPython, utils, dialog, events, keyboard, moment) {
     "use strict";
 
@@ -219,7 +220,7 @@ define([
         name_sort_helper($('#notebook_list'), "div.list_item", 'span.item_name');
     };
 
-// zwt to do
+
     NotebookList.prototype.handleBigUpload =    function(data, dropOrForm) {
         var that = this;
         var files;
@@ -261,8 +262,78 @@ define([
         // var form = $('input.fileinput');
         // form.replaceWith(form.clone(true));
         return false;
-    }
+    };
 
+
+    NotebookList.prototype.setupBigUpload =     function() {
+        var that = this;
+        var path = that.notebook_path;
+
+        if (path != "") path = path + '/';
+
+        $('#big_upload').fileupload({
+            url: '/api/upload_handlers/' + path,
+            maxFileSize: 99999999999,
+            maxChunkSize: 5000000
+        })
+
+        $('#big_upload').fileupload({
+            add: function(e, data) {
+                that.handleBigUpload(data, 'form');
+                if (e.isDefaultPrevented()) {
+                    return false;
+                }
+                if (data.files.length == 0) return;
+                if (data.autoUpload || (data.autoUpload !== false &&
+                        $(this).fileupload('option', 'autoUpload'))) {
+                    data.process().done(function () {
+                        data.submit();
+                    });
+                }
+            },
+
+            done: function (e, data) {
+                that.session_list.load_sessions();
+            }
+        });
+
+        var getBitrate = function(bits) {
+            if (typeof bits !== 'number') {
+                return '';
+            }
+            bits = (bits / 8).toFixed(2);
+            if (bits >= 1000000000) {
+                return (bits / 1000000000).toFixed(2) + ' GB/s';
+            }
+            if (bits >= 1000000) {
+                return (bits / 1000000).toFixed(2) + ' MB/s';
+            }
+            if (bits >= 1000) {
+                return (bits / 1000).toFixed(2) + ' KB/s';
+            }
+            return bits.toFixed(2) + ' BYTES/s';
+        }
+
+        $('#big_upload').fileupload({
+            progress: function (e, data) {
+                if (e.isDefaultPrevented()) {
+                    return false;
+                }
+                var progress = Math.floor(data.loaded / data.total * 100);
+                if (data.context) {
+                    // console.log(getBitrate(data.bitrate));
+                    if (data.loaded >= data.total)
+                        data.context.siblings(".text").text("Done");
+                    else
+                        data.context.siblings(".text").text(getBitrate(data.bitrate));
+                    data.context.attr('aria-valuenow', progress)
+                        .children().first().css('width', progress + '%');
+                }
+            },
+        });
+
+        // $("#alternate_upload").css("display", "none");
+    };
 
 
     NotebookList.prototype.handleFilesUpload =  function(event, dropOrForm) {

@@ -15,11 +15,7 @@ require([
     'tree/js/kernellist',
     'tree/js/terminallist',
     'tree/js/newnotebook',
-    'auth/js/loginwidget',
-    'bigupload/js/vendor/jquery.ui.widget',
-    'bigupload/js/jquery.iframe-transport',
-    'bigupload/js/jquery.fileupload',
-    'bigupload/js/cors/jquery.xdr-transport'
+    'auth/js/loginwidget'
 ], function(
     IPython,
     dialog,
@@ -82,75 +78,6 @@ require([
             common_options
         )
     );
-
-    // Setup big file upload
-    var path = notebook_list.notebook_path;
-    if (path != "") path = path + '/'
-    $('#big_upload').fileupload({
-        url: '/api/upload_handlers/' + path,
-        maxFileSize: 99999999999,
-        maxChunkSize: 5000000
-    })
-    $('#big_upload').fileupload({
-        add: function(e, data) {
-            notebook_list.handleBigUpload(data, 'form');
-            if (e.isDefaultPrevented()) {
-                return false;
-            }
-            if (data.files.length == 0) return;
-            if (data.autoUpload || (data.autoUpload !== false &&
-                    $(this).fileupload('option', 'autoUpload'))) {
-                data.process().done(function () {
-                    data.submit();
-                });
-            }
-        },
-
-        done: function (e, data) {
-            notebook_list.session_list.load_sessions();
-        }
-    });
-    var getBitrate = function(bits) {
-        if (typeof bits !== 'number') {
-            return '';
-        }
-        bits = (bits / 8).toFixed(2);
-        if (bits >= 1000000000) {
-            return (bits / 1000000000).toFixed(2) + ' GB/s';
-        }
-        if (bits >= 1000000) {
-            return (bits / 1000000).toFixed(2) + ' MB/s';
-        }
-        if (bits >= 1000) {
-            return (bits / 1000).toFixed(2) + ' KB/s';
-        }
-        return bits.toFixed(2) + ' BYTES/s';
-    }
-    $('#big_upload').fileupload({
-        progress: function (e, data) {
-            if (e.isDefaultPrevented()) {
-                return false;
-            }
-            var progress = Math.floor(data.loaded / data.total * 100);
-            if (data.context) {
-                // console.log(getBitrate(data.bitrate));
-                if (data.loaded >= data.total)
-                    data.context.siblings(".text").text("Done");
-                else
-                    data.context.siblings(".text").text(getBitrate(data.bitrate));
-                data.context.attr('aria-valuenow', progress)
-                    .children().first().css('width', progress + '%');
-                data.context.closest
-            }
-        },
-        // progressall: function (e, data) {
-        //     var progress = parseInt(data.loaded / data.total * 100, 10);
-        //     $('#progress .bar').css(
-        //         'width',
-        //         progress + '%'
-        //     );
-        // }
-    });
 
     var interval_id=0;
     // auto refresh every xx secondes, no need to be fast,
@@ -227,7 +154,10 @@ require([
     $("#alternate_upload").change(function (event){
         notebook_list.handleFilesUpload(event,'form');
     });
-    
+
+    // Setup big file upload
+    notebook_list.setupBigUpload();    
+
     // set hash on tab click
     $("#tabs").find("a").click(function(e) {
         // Prevent the document from jumping when the active tab is changed to a 
